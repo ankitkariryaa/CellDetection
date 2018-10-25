@@ -30,7 +30,8 @@ class FrameInfo():
         self.bbox = bbox
         # self.full_img = np.array(cv2.imread(os.path.join(self.base_dir, self.img_id)), dtype=np.float32)
         image = rasterio.open(os.path.join(self.base_dir, self.img_id))
-        self.full_img = image.read()
+        read_image = image.read()
+        self.full_img = np.transpose(read_image, (1, 2, 0))
         self.img_data = self.full_img
         self.annotations = annotations
         self.all_seq_patches = []
