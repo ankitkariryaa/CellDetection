@@ -2,7 +2,7 @@
 *.pyc
 *.ipynb
 *.egg-info/
-
+.
 # general
 *.*~
 .#.*
@@ -11,3 +11,4 @@ images/
 quality_checks/*
 resources/*
 *.png
+.idea/

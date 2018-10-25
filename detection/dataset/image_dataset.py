@@ -3,6 +3,8 @@ import os
 
 import cv2
 import numpy as np
+import geopandas as gp
+import rasterio
 from sklearn.decomposition import PCA
 
 from detection.utils import image_utils
@@ -26,11 +28,11 @@ class FrameInfo():
         # add buffer to region of interest ...
         self.roi = roi[0] - bbox[0], roi[1] + bbox[0], roi[2] - bbox[1], roi[3] + bbox[1]
         self.bbox = bbox
-        self.full_img = np.array(cv2.imread(os.path.join(self.base_dir, self.img_id)), dtype=np.float32)
-        # self.full_img = cv2.imread(os.path.join(self.base_dir, self.img_id))
-        self.img_data = self.full_img[self.roi[2]: self.roi[3], self.roi[0]: self.roi[1]]
-        # normalize annotations for cropped image...
-        self.annotations = [(ann[0] - self.roi[0], ann[1] - self.roi[2], ann[2]) for ann in annotations]
+        # self.full_img = np.array(cv2.imread(os.path.join(self.base_dir, self.img_id)), dtype=np.float32)
+        image = rasterio.open(os.path.join(self.base_dir, self.img_id))
+        self.full_img = image.read()
+        self.img_data = self.full_img
+        self.annotations = annotations
         self.all_seq_patches = []
 
     def annotated_img(self):
@@ -147,46 +149,53 @@ class ImageDataset(object):
         '''
         logger.info('Loading data from directory:{}'.format(self.base_dir))
         all_annotations = {}
-        with open(self.annotation_file, 'r') as fr:
-            for line in fr:
-                frame, x, y, s, _ = list(map(int, line.split()))
-                if frame not in all_annotations:
-                    all_annotations[frame] = []
-
-                all_annotations[frame].append((x, y, s))
+        #!!!We dont have frames this done only to comply with the code in this repo!!!
+        frame = 1
 
         all_files = os.listdir(self.base_dir)
         all_files = [fn for fn in all_files if fn.endswith(self.file_suffix)]
-        all_files.sort(key=lambda x: filename_to_id(x))
+        all_files.sort()
         # since image files are listed sequentially in annotation file
 
-        roi = self.get_global_bounds(all_annotations)
+        roi = self.get_global_bounds_from_images(self.base_dir,all_files)
+
+        trees = gp.read_file(self.annotation_file)
+        filtered_trees = trees[trees['geometry'].apply(lambda g: self.bound_contains_point(roi, g))]
+        all_annotations[frame] = filtered_trees.apply(lambda row: (row['geometry'].x, row['geometry'].y, row['KRONE_DM']), axis=1).values
 
         frame_infos = []
         total_annotations = 0
         for i, fn in enumerate(all_files):
             annotations = all_annotations[i] if i in all_annotations else []
-            frame_info = FrameInfo(self.base_dir, fn, roi, annotations);
+            frame_info = FrameInfo(self.base_dir, fn, roi, annotations)
             frame_infos.append(frame_info)
             total_annotations += len(annotations)
 
         logger.info('Total frames loaded:{}, total annotations:{}', len(frame_infos), total_annotations)
         return frame_infos
 
-    def get_global_bounds(self, all_annotations):
+    def bound_contains_point(self, bound, point):
+        '''
+        Reads the annotation file and create frame objects for all image frames.
+        '''
+        if (bound[0] < point.x and bound[2] >= point.x and bound[1] < point.y and bound[3] >= point.y):
+            return True
+        else:
+            return False
+
+    def get_global_bounds_from_images(self, base_dir, images):
         '''
         Returns largest image region such that it covers complete annotated region in all input images.
         '''
         img_bounds = []
-        for key, annotations in all_annotations.items():
-            minx = min(annotations, key=lambda ann: ann[0])[0]
-            maxx = max(annotations, key=lambda ann: ann[0])[0]
-            miny = min(annotations, key=lambda ann: ann[1])[1]
-            maxy = max(annotations, key=lambda ann: ann[1])[1]
-            img_bounds.append((minx, maxx, miny, maxy))
+        for image in images:
+            print(base_dir + image)
+            with rasterio.open(base_dir + image) as src:
+                left, bottom, right, top = src.bounds
+                img_bounds.append((left, bottom, right, top))
         gminx = min(img_bounds, key=lambda x: x[0])[0]
-        gmaxx = max(img_bounds, key=lambda x: x[1])[1]
-        gminy = min(img_bounds, key=lambda x: x[2])[2]
+        gminy = min(img_bounds, key=lambda x: x[1])[1]
+        gmaxx = max(img_bounds, key=lambda x: x[2])[2]
         gmaxy = max(img_bounds, key=lambda x: x[3])[3]
 
         return gminx, gmaxx, gminy, gmaxy
