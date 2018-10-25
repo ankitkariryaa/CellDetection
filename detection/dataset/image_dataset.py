@@ -161,7 +161,9 @@ class ImageDataset(object):
 
         trees = gp.read_file(self.annotation_file)
         filtered_trees = trees[trees['geometry'].apply(lambda g: self.bound_contains_point(roi, g))]
-        all_annotations[frame] = filtered_trees.apply(lambda row: (row['geometry'].x, row['geometry'].y, row['KRONE_DM']), axis=1).values
+        # The ['KRONE_DM'] is divided by 0.20, as each pixel is 0.20 * 0.20 cm and KRONE_DM is in metres
+        all_annotations[frame] = filtered_trees.apply(lambda row: (row['geometry'].x, row['geometry'].y, row['KRONE_DM']/0.20), axis=1).values
+
 
         frame_infos = []
         total_annotations = 0
