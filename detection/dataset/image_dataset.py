@@ -150,21 +150,32 @@ class ImageDataset(object):
         '''
         logger.info('Loading data from directory:{}'.format(self.base_dir))
         all_annotations = {}
-        #!!!We dont have frames this done only to comply with the code in this repo!!!
-        frame = 1
 
         all_files = os.listdir(self.base_dir)
         all_files = [fn for fn in all_files if fn.endswith(self.file_suffix)]
-        all_files.sort()
+        all_files.sort(key=lambda x: filename_to_id(x))
         # since image files are listed sequentially in annotation file
 
-        roi = self.get_global_bounds_from_images(self.base_dir,all_files)
+        global_bounds_of_images = self.get_global_bounds_from_images(self.base_dir, all_files)
 
         trees = gp.read_file(self.annotation_file)
-        filtered_trees = trees[trees['geometry'].apply(lambda g: self.bound_contains_point(roi, g))]
+        trees.dropna(inplace=True)
+        filtered_trees = trees[trees['geometry'].apply(lambda g: self.bound_contains_point(global_bounds_of_images, g))]
         # The ['KRONE_DM'] is divided by 0.20, as each pixel is 0.20 * 0.20 cm and KRONE_DM is in metres
-        all_annotations[frame] = filtered_trees.apply(lambda row: (row['geometry'].x, row['geometry'].y, row['KRONE_DM']/0.20), axis=1).values
+        # For Sanju: The third parameter is the size right????
+        filtered_trees_info = filtered_trees.apply(lambda row: (row['geometry'].x, row['geometry'].y, int(row['KRONE_DM']/0.2)), axis=1).values
 
+
+        for (x1,y1,s) in filtered_trees_info:
+            #TODO: Fix this hack when running on larger dataset!
+            frame = int((x1 / 1000)-565)
+            if frame not in all_annotations:
+                all_annotations[frame] = []
+
+            #  x1 and y1 are divided by 0.2 to convert to pixel index
+            all_annotations[frame].append((int((x1 % 1000) / 0.2), int((y1 % 1000) / 0.2), s))
+
+        roi = self.get_global_bounds(all_annotations)
 
         frame_infos = []
         total_annotations = 0
@@ -185,6 +196,24 @@ class ImageDataset(object):
             return True
         else:
             return False
+
+    def get_global_bounds(self, all_annotations):
+        '''
+        Returns largest image region such that it covers complete annotated region in all input images.
+        '''
+        img_bounds = []
+        for key, annotations in all_annotations.items():
+            minx = min(annotations, key=lambda ann: ann[0])[0]
+            maxx = max(annotations, key=lambda ann: ann[0])[0]
+            miny = min(annotations, key=lambda ann: ann[1])[1]
+            maxy = max(annotations, key=lambda ann: ann[1])[1]
+            img_bounds.append((minx, maxx, miny, maxy))
+        gminx = min(img_bounds, key=lambda x: x[0])[0]
+        gmaxx = max(img_bounds, key=lambda x: x[1])[1]
+        gminy = min(img_bounds, key=lambda x: x[2])[2]
+        gmaxy = max(img_bounds, key=lambda x: x[3])[3]
+
+        return gminx, gmaxx, gminy, gmaxy
 
     def get_global_bounds_from_images(self, base_dir, images):
         '''
