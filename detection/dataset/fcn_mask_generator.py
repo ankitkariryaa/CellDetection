@@ -4,6 +4,7 @@ import numpy as np
 
 from detection.dataset.dataset_generator import DatasetGenerator
 from detection.dataset.image_dataset import ImageDataset
+from detection.dataset.tree_dataset import TreeDataset
 
 
 class FCNMaskGenerator(DatasetGenerator):
@@ -40,7 +41,7 @@ class FCNMaskGenerator(DatasetGenerator):
 
 
 if __name__ == '__main__':
-    dataset = ImageDataset('/data/lrz/hm-cell-tracking/sequences_A549/annotations', '.png')
+    dataset = TreeDataset('/home/sanjeev/Downloads/subset/', '.jpg', 'trees_out.geojson')
     fcn_mask_gen = FCNMaskGenerator(dataset, 0.2, 0.1).fcn_data_generator(1, (224, 224), 1)
     for data in fcn_mask_gen:
         input, output = data

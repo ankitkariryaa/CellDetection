@@ -31,7 +31,7 @@ class FrameInfo():
         # self.full_img = np.array(cv2.imread(os.path.join(self.base_dir, self.img_id)), dtype=np.float32)
         image = rasterio.open(os.path.join(self.base_dir, self.img_id))
         read_image = image.read()
-        self.full_img = np.transpose(read_image, (1, 2, 0))
+        self.full_img = np.transpose(read_image, (1, 2, 0)).astype(np.uint8).copy()
         self.img_data = self.full_img
         self.annotations = annotations
         self.all_seq_patches = []
@@ -163,16 +163,16 @@ class ImageDataset(object):
         filtered_trees.dropna(inplace=True)
         # The ['KRONE_DM'] is divided by 0.20, as each pixel is 0.20 * 0.20 cm and KRONE_DM is in metres
         # For Sanju: The third parameter is the size right????
-        filtered_trees_info = filtered_trees.apply(lambda row: (row['geometry'].x, row['geometry'].y, int(row['KRONE_DM']/0.2)), axis=1).values
+        filtered_trees_info = filtered_trees.apply(
+            lambda row: (row['geometry'].x, row['geometry'].y, int(row['KRONE_DM'] / 0.2)), axis=1).values
 
-
-        for (x1,y1,s) in filtered_trees_info:
-            #TODO: Fix this hack when running on larger dataset!
-            frame = int((x1 / 1000)-565)
+        for (x1, y1, s) in filtered_trees_info:
+            # TODO: Fix this hack when running on larger dataset!
+            frame = int((x1 / 1000) - 565)
             if frame not in all_annotations:
                 all_annotations[frame] = []
             #  x1 and y1 are divided by 0.2 to convert to pixel index
-            all_annotations[frame].append((int((x1 % 1000) / 0.2), 5000- int((y1 % 1000) / 0.2), s))
+            all_annotations[frame].append((int((x1 % 1000) / 0.2), 5000 - int((y1 % 1000) / 0.2), s))
 
         roi = self.get_global_bounds(all_annotations)
 

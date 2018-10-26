@@ -47,6 +47,7 @@ def inter_over_union(bounds1, bounds2):
 def get_annotated_img(img, annotations, bbox_size, color=(255, 0, 0)):
     annotated_img = np.array(img)
     for ann in annotations:
+        bbox_size = (int(ann[2]), int(ann[2]))
         x, y = map(int, ann[0:2])
         cv2.rectangle(annotated_img, (x - bbox_size[0], y - bbox_size[1]), (x + bbox_size[0], y + bbox_size[1]),
                       color, 2)
@@ -166,18 +167,21 @@ def normalize(img):
 
 def get_rectangle_area(rectangle):
     x1, y1, x2, y2 = rectangle
-    area = abs(x2-x1) * abs(y2-y1)
+    area = abs(x2 - x1) * abs(y2 - y1)
     return area
+
 
 def get_cell_center(rectangle):
     x1, y1, x2, y2 = rectangle
-    return int((x1+x2)/2), int((y1+y2)/2)
+    return int((x1 + x2) / 2), int((y1 + y2) / 2)
+
 
 def group_bboxes(bboxes):
     grouped_rectangles = cv2.groupRectangles(bboxes, 1, eps=0.05)[0]
     # remove rectangles with small area
     grouped_rectangles = [r for r in grouped_rectangles if get_rectangle_area(r) > 200]
     return grouped_rectangles
+
 
 if __name__ == '__main__':
     print(filename_to_id('cam0_0089.jpg'))
