@@ -25,7 +25,8 @@ class FCNMaskGenerator(DatasetGenerator):
                 img_patches = frame.get_random_patches(patch_size, 1)
                 for patch in img_patches:
                     img = patch.get_img()
-                    img = (img - img.mean()) / (img.std() + 1e-9)
+                    ### Remove normalization for the moment
+                    # img = (img - img.mean()) / (img.std() + 1e-9)
                     image_batch.append(img)
                 # image_batch.extend([img_patch.get_img() for img_patch in img_patches])
                 img_masks = [img_patch.ann_mask(no_classes) for img_patch in img_patches]

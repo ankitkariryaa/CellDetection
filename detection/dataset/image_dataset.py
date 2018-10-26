@@ -157,10 +157,10 @@ class ImageDataset(object):
         # since image files are listed sequentially in annotation file
 
         global_bounds_of_images = self.get_global_bounds_from_images(self.base_dir, all_files)
-
         trees = gp.read_file(self.annotation_file)
-        trees.dropna(inplace=True)
+
         filtered_trees = trees[trees['geometry'].apply(lambda g: self.bound_contains_point(global_bounds_of_images, g))]
+        filtered_trees.dropna(inplace=True)
         # The ['KRONE_DM'] is divided by 0.20, as each pixel is 0.20 * 0.20 cm and KRONE_DM is in metres
         # For Sanju: The third parameter is the size right????
         filtered_trees_info = filtered_trees.apply(lambda row: (row['geometry'].x, row['geometry'].y, int(row['KRONE_DM']/0.2)), axis=1).values
@@ -171,9 +171,8 @@ class ImageDataset(object):
             frame = int((x1 / 1000)-565)
             if frame not in all_annotations:
                 all_annotations[frame] = []
-
             #  x1 and y1 are divided by 0.2 to convert to pixel index
-            all_annotations[frame].append((int((x1 % 1000) / 0.2), int((y1 % 1000) / 0.2), s))
+            all_annotations[frame].append((int((x1 % 1000) / 0.2), 5000- int((y1 % 1000) / 0.2), s))
 
         roi = self.get_global_bounds(all_annotations)
 
@@ -192,7 +191,7 @@ class ImageDataset(object):
         '''
         Reads the annotation file and create frame objects for all image frames.
         '''
-        if (bound[0] < point.x and bound[2] >= point.x and bound[1] < point.y and bound[3] >= point.y):
+        if (bound[0] < point.x and bound[1] >= point.x and bound[2] < point.y and bound[3] >= point.y):
             return True
         else:
             return False
