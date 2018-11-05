@@ -1,14 +1,12 @@
 import cv2
-from keras.engine import Input
-from keras.engine import Model
-from keras.layers import Convolution2D, MaxPooling2D, Deconvolution2D, Dropout
-from keras.optimizers import Adam
-from keras.layers import merge
-import matplotlib.pyplot as plt
+from keras.models import *
+from keras.layers import *
+from keras.optimizers import *
+from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from detection.dataset.image_dataset import ImageDataset
 from detection.detectors.fcn_detecter import FCNDetector
 from detection.utils.image_utils import local_maxima, get_annotated_img
-
+import matplotlib.pyplot as plt
 
 class UNet(FCNDetector):
     '''
@@ -18,7 +16,7 @@ class UNet(FCNDetector):
     '''
 
     def __init__(self, input_shape, learning_rate, no_classes, weight_file=None):
-        super(UNet, self).__init__(input_shape, learning_rate, no_classes, weight_file)
+        super().__init__(input_shape, learning_rate, no_classes, weight_file)
 
     def build_model(self):
         input = Input(batch_shape=self.input_shape, name='input_1')
