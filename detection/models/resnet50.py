@@ -21,7 +21,7 @@ from keras.layers import merge, Input
 from keras.utils.layer_utils import convert_all_kernels_in_model
 
 # Weights downloaded from
-BASE_WEIGHT_DIR = '/data/model_weights/'
+BASE_WEIGHT_DIR = '/home/kari/.keras/models'
 TH_WEIGHTS_PATH = os.path.join(BASE_WEIGHT_DIR, 'resnet50_weights_th_dim_ordering_th_kernels.h5')
 TF_WEIGHTS_PATH = os.path.join(BASE_WEIGHT_DIR, 'resnet50_weights_tf_dim_ordering_tf_kernels.h5')
 TH_WEIGHTS_PATH_NO_TOP = os.path.join(BASE_WEIGHT_DIR, 'resnet50_weights_th_dim_ordering_th_kernels_notop.h5')
