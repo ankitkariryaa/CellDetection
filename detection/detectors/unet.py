@@ -3,7 +3,7 @@ from keras.engine import Input
 from keras.engine import Model
 from keras.layers import Convolution2D, MaxPooling2D, Deconvolution2D, Dropout
 from keras.optimizers import Adam
-from keras.engine import merge
+from keras.layers import merge
 import matplotlib.pyplot as plt
 from detection.dataset.image_dataset import ImageDataset
 from detection.detectors.fcn_detecter import FCNDetector
@@ -20,62 +20,53 @@ class UNet(FCNDetector):
     def __init__(self, input_shape, learning_rate, no_classes, weight_file=None):
         super(UNet, self).__init__(input_shape, learning_rate, no_classes, weight_file)
 
-    def upconv2_2(self, input, concat_tensor, no_features):
-        out_shape = [dim.value for dim in concat_tensor.get_shape()]
-        up_conv = Deconvolution2D(no_features, 5, 5, out_shape, subsample=(2, 2))(input)
-        # up_conv = Convolution2D(no_features, 2, 2)(UpSampling2D()(input))
-        merged = merge([concat_tensor, up_conv], mode='concat', concat_axis=3)
-        return merged
-
-    def conv3_3(self, input, no_features):
-        conv1 = Convolution2D(no_features, 3, 3, activation='relu')(input)
-        conv2 = Convolution2D(no_features, 3, 3, activation='relu')(conv1)
-        return conv2
-
     def build_model(self):
         input = Input(batch_shape=self.input_shape, name='input_1')
-        conv1_1 = Convolution2D(64, 3, 3, activation='relu')(input)
-        conv1_2 = Convolution2D(64, 3, 3, activation='relu')(conv1_1)
-        conv1_out = MaxPooling2D()(conv1_2)
+        conv1 = Conv2D(64, 3, activation='relu', padding='same')(input)
+        conv1 = Conv2D(64, 3, activation='relu', padding='same')(conv1)
+        pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+        conv2 = Conv2D(128, 3, activation='relu', padding='same')(pool1)
+        conv2 = Conv2D(128, 3, activation='relu', padding='same')(conv2)
+        pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+        conv3 = Conv2D(256, 3, activation='relu', padding='same')(pool2)
+        conv3 = Conv2D(256, 3, activation='relu', padding='same')(conv3)
+        pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+        conv4 = Conv2D(512, 3, activation='relu', padding='same')(pool3)
+        conv4 = Conv2D(512, 3, activation='relu', padding='same')(conv4)
+        drop4 = Dropout(0.5)(conv4)
+        pool4 = MaxPooling2D(pool_size=(2, 2))(drop4)
 
-        conv2_1 = Convolution2D(128, 3, 3, activation='relu')(conv1_out)
-        dropout2 = Dropout(0.5)(conv2_1)
-        conv2_2 = Convolution2D(128, 3, 3, activation='relu')(dropout2)
-        conv2_out = MaxPooling2D()(conv2_2)
+        conv5 = Conv2D(1024, 3, activation='relu', padding='same')(pool4)
+        conv5 = Conv2D(1024, 3, activation='relu', padding='same')(conv5)
+        drop5 = Dropout(0.5)(conv5)
 
-        conv3_1 = Convolution2D(256, 3, 3, activation='relu')(conv2_out)
-        dropout3 = Dropout(0.5)(conv3_1)
-        conv3_2 = Convolution2D(256, 3, 3, activation='relu')(dropout3)
-        conv3_out = MaxPooling2D()(conv3_2)
+        up6 = Conv2D(512, 2, activation='relu', padding='same')(
+            UpSampling2D(size=(2, 2))(drop5))
+        merge6 = merge([drop4, up6], mode='concat', concat_axis=3)
+        conv6 = Conv2D(512, 3, activation='relu', padding='same')(merge6)
+        conv6 = Conv2D(512, 3, activation='relu', padding='same')(conv6)
 
-        conv4_1 = Convolution2D(512, 3, 3, activation='relu')(conv3_out)
-        dropout4 = Dropout(0.5)(conv4_1)
-        conv4_2 = Convolution2D(512, 3, 3, activation='relu')(dropout4)
-        conv4_out = MaxPooling2D()(conv4_2)
+        up7 = Conv2D(256, 2, activation='relu', padding='same')(
+            UpSampling2D(size=(2, 2))(conv6))
+        merge7 = merge([conv3, up7], mode='concat', concat_axis=3)
+        conv7 = Conv2D(256, 3, activation='relu', padding='same')(merge7)
+        conv7 = Conv2D(256, 3, activation='relu', padding='same')(conv7)
 
-        conv5_1 = Convolution2D(1024, 3, 3, activation='relu')(conv4_out)
-        dropout5 = Dropout(0.5)(conv5_1)
-        conv5_2 = Convolution2D(1024, 3, 3, activation='relu')(dropout5)
-        conv5_out = MaxPooling2D()(conv5_2)
+        up8 = Conv2D(128, 2, activation='relu', padding='same')(
+            UpSampling2D(size=(2, 2))(conv7))
+        merge8 = merge([conv2, up8], mode='concat', concat_axis=3)
+        conv8 = Conv2D(128, 3, activation='relu', padding='same')(merge8)
+        conv8 = Conv2D(128, 3, activation='relu', padding='same')(conv8)
 
-        up_conv1 = self.upconv2_2(conv5_out, conv4_out, 512)
-        # conv6_out = self.conv3_3(up_conv1, 512)
+        up9 = Conv2D(64, 2, activation='relu', padding='same')(
+            UpSampling2D(size=(2, 2))(conv8))
+        merge9 = merge([conv1, up9], mode='concat', concat_axis=3)
+        conv9 = Conv2D(64, 3, activation='relu', padding='same')(merge9)
+        conv9 = Conv2D(64, 3, activation='relu', padding='same')(conv9)
+        conv9 = Conv2D(2, 3, activation='relu', padding='same')(conv9)
+        conv10 = Conv2D(1, 1, activation='sigmoid')(conv9)
 
-        up_conv2 = self.upconv2_2(up_conv1, conv3_out, 256)
-        # conv7_out = self.conv3_3(up_conv2, 256)
-
-        up_conv3 = self.upconv2_2(up_conv2, conv2_out, 128)
-        # conv8_out = self.conv3_3(up_conv3, 128)
-
-        up_conv4 = self.upconv2_2(up_conv3, conv1_out, 64)
-        # conv9_out = self.conv3_3(up_conv4, 64)
-
-        out_shape = [dim.value for dim in input.get_shape()]
-        out_shape = [self.batch_size] + out_shape[1:3] + [self.no_classes]
-        output = Deconvolution2D(self.no_classes, 5, 5, out_shape, subsample=(2, 2), activation='sigmoid',
-                                 name='class_out')(up_conv4)
-
-        model = Model(input, output)
+        model = Model(input=input, output=conv10)
         optimizer = Adam(lr=self.learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
         model.compile(optimizer=optimizer,
                       loss={'class_out': 'binary_crossentropy'}, metrics=['binary_accuracy'])

@@ -26,7 +26,7 @@ def add_image_idxs(input_file, output_file, zone=32):
     print("Written output to file:{}".format(output_file))
 
 
-# Usage: python3 -m detection.dataset.dataset_converter /home/sanjeev/Downloads/subset/trees.geojson \
+# Usage: python3 -m detection.dataset.annotation_mapper /home/sanjeev/Downloads/subset/trees.geojson \
 #  /home/sanjeev/Downloads/subset/trees_out.geojson
 
 if __name__ == '__main__':

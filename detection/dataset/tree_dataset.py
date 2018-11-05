@@ -26,8 +26,8 @@ class TreeDataset(ImageDataset):
                 p = row['geometry']
                 coord = list(p.coords[0])
                 ann = rowcol(image.transform, coord[0], coord[1])
-                if not np.isnan(row['STAMMUMFANG']):
-                    tree_size = int(row['STAMMUMFANG'])
+                if not np.isnan(row['KRONE_DM']):
+                    tree_size = int(row['KRONE_DM'])
                 else:
                     tree_size = 10
                 tree_size = min(20, max(tree_size, 60))
